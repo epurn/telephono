@@ -1,0 +1,7 @@
+./in_wav/*
+./in_img/*
+./out_wav/*
+./out_img/*
+./.venv/*
+./__pycache__/*
+./.vscode/*
