@@ -1,4 +1,5 @@
 from PIL import Image
+from pathlib import Path
 import math
 import json
 import wave
@@ -100,6 +101,8 @@ def convert_wav(path, gamma=0.6):
     img = img.resize((args["orig_w"], args["orig_h"]), Image.Resampling.BICUBIC)
 
     out_name = os.path.splitext(os.path.basename(path))[0] + "_recovered.png"
-    out_path = os.path.join("out_img", out_name)
+    out_name = os.path.join("out_img", out_name)
+    out_path = Path(out_name)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(out_path)
     return out_path

@@ -1,4 +1,5 @@
 from PIL import Image
+from pathlib import Path
 import math
 import json
 import wave
@@ -48,7 +49,9 @@ def _calculate_args(img, min_hz, max_hz, color):
     
 
 def _write_metadata(path, args):
-    with open(path, "w", encoding='utf-8') as f:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
         json.dump(args, f)
 
 
