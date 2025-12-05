@@ -1,7 +1,10 @@
-./in_wav/*
-./in_img/*
-./out_wav/*
-./out_img/*
-./.venv/*
-./__pycache__/*
-./.vscode/*
+# Basic
+.venv/
+__pycache__/
+.vscode/
+
+# Input/Output folders
+in_wav/
+in_img/
+out_wav/
+out_img/
