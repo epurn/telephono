@@ -8,6 +8,7 @@ import numpy as np
 from scipy.signal import ShortTimeFFT
 
 def _load_wavs(path, color):
+    # Load single or RGB WAV file(s)
     wav_paths = []
     path_no_ext, ext = path.rsplit(".", 1)
     if color:
@@ -25,6 +26,7 @@ def _load_wavs(path, color):
     return wav_ars
 
 def _load_metadata(path):
+    # Load metadata
     meta_path = path.lstrip(".").lstrip("\\").rsplit(".")[0] + ".metadata"
     with open(meta_path, "rb") as f:
         meta = json.load(f)
@@ -35,7 +37,8 @@ def _pad_or_trim(in_ars, shape) -> list[np.ndarray]:
     out_h, out_w = shape
 
     for ar in in_ars:
-        ar_trim = ar[:out_h, :out_w] # Trim first
+        # Trim first
+        ar_trim = ar[:out_h, :out_w] 
         h, w = ar_trim.shape
 
         # Pad Height
@@ -59,35 +62,47 @@ def _pad_or_trim(in_ars, shape) -> list[np.ndarray]:
 
 def _convert_to_rgb(wav_ars, n_fft, hop_length, sample_rate, f_max_bin, f_min_bin, gamma):
     rgb_ars = []
+
+    # For each color channel
     for wav_ar in wav_ars:
+        # Convert data to float32
         in_wav_ar = wav_ar.astype(np.float32) / 32767.0
     
-
+        # Do STFT
         stfft = ShortTimeFFT(
             win=np.hanning(n_fft),
             hop=hop_length,
             fs=sample_rate,
             mfft=n_fft)
-
-        band_height = f_max_bin - f_min_bin + 1
         mag_ar = np.abs(stfft.stft(in_wav_ar))
+       
+        # Restore only real image data
+        band_height = f_max_bin - f_min_bin + 1
         img_ar = mag_ar[f_min_bin:f_min_bin+band_height] 
+
+        # Convert to uint8
         img_ar = (img_ar*255.0*gamma).clip(0, 255).astype(np.uint8)
+
+        # Flip image back to correct orientation
         img_ar = np.flipud(img_ar)
         rgb_ars.append(img_ar)
+
     return rgb_ars
 
 
 def convert_wav(path, gamma=0.6):
+    # Load needed files
     args = _load_metadata(path)
-    
     wav_ars = _load_wavs(path=path, color=args["color"])
     
+    # Convert to RGB if needed, if color was = False, then just load one channel
     rgb_ars = _convert_to_rgb(wav_ars, gamma=gamma, **{k: args.get(k, None) for k in ("n_fft", "hop_length", "sample_rate", "f_max_bin", "f_min_bin")})
 
     if not args["color"]:
+        # Simple conversion if monochromee
         img = Image.fromarray(rgb_ars[0], mode='L')
     else:
+        # Complex color conversion
         # we need all input arrays to be the same length
         bal_ars = rgb_ars.copy()
         bal_ars = _pad_or_trim(bal_ars, 
@@ -96,10 +111,17 @@ def convert_wav(path, gamma=0.6):
                 min(ar.shape[1] for ar in bal_ars)
             )
         )
+
+        # Combine channels
         in_ar = np.stack(bal_ars, axis=-1)
+
+        # Convert image
         img = Image.fromarray(in_ar, mode='RGB')
+
+    # Resize to original dims
     img = img.resize((args["orig_w"], args["orig_h"]), Image.Resampling.BICUBIC)
 
+    # Save output, create path if needed
     out_name = os.path.splitext(os.path.basename(path))[0] + "_recovered.png"
     out_name = os.path.join("out_img", out_name)
     out_path = Path(out_name)
